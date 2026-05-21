@@ -12,10 +12,10 @@ def create_message(size):
 
 def setup_network():
     # Create devices
-    host_a = Host(HOST_A['name'], HOST_A['ip'], HOST_A['mac'])
-    router_r1 = Router(ROUTER_R1['name'], ROUTER_R1['interfaces'])
-    host_b = Host(HOST_B['name'], HOST_B['ip'], HOST_B['mac'])
-    
+    host_a = Host(HOST_A['name'], HOST_A['ip'], HOST_A['mac'], HOST_A['routing_table'], HOST_A['ARP'])
+    router_r1 = Router(ROUTER_R1['name'], ROUTER_R1['interfaces'], ROUTER_R1['routing_table'], ROUTER_R1['ARP'])
+    host_b = Host(HOST_B['name'], HOST_B['ip'], HOST_B['mac'], HOST_B['routing_table'], HOST_B['ARP'])
+
 
 
 def main():
