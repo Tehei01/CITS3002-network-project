@@ -10,15 +10,18 @@ NETWORK_1 = "10.0.1.0/24"
 NETWORK_2 = "10.0.2.0/24"
 
 HOST_A = {
+    "name": "Host A",
     'ip': "10.0.1.10",
     "mac": " AA:AA:AA:AA:AA:AA"
 }
 
 ROUTER_R1 = {
+    "name": "R1",
     'interfaces': [("10.0.1.1", "BB:BB:BB:BB:BB:BB"), ("10.0.2.1", "CC:CC:CC:CC:CC:CC")]
 }
 
 HOST_B = {
+    "name": "Host B",
     "ip": "10.0.2.20",
     "mac": "DD:DD:DD:DD:DD:DD"
 }
