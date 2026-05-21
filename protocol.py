@@ -13,6 +13,11 @@ class Frame:
         self.type = type          # Type field (2 bytes, default to IPv4)
         self.payload = payload    # Payload (variable length)
 
+    def receive_packet(self, packet):
+        """Simulate receiving a packet and encapsulating it in a frame"""
+        self.payload = packet
+        
+
 
 #Layer 3: Header (IP-like Packet)
 class Packet:
