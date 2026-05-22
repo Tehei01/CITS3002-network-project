@@ -1,5 +1,10 @@
+todo:
+    - do we need other possible branches like checksum verif failed print error msg
+    -  error handling for wrong input
 
 
+for report
+    - talk about the interface system for layer 2
 
 
 

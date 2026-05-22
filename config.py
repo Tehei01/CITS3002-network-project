@@ -23,9 +23,9 @@ HOST_A = {
 }
 
 ROUTER_R1 = {
-    "name": "R1",
-    'interfaces': [("interface 1", "10.0.1.1", "BB:BB:BB:BB:BB:BB"), ("interface 2", "10.0.2.1", "CC:CC:CC:CC:CC:CC")],
-    "routing_table": {"10.0.1.0/24": ("direct", "interface 1"), "10.0.2.0/24": ("direct", "interface 2")},
+    "name": "Router R1",
+    'Interfaces': {"Interface 1": ("10.0.1.1", "BB:BB:BB:BB:BB:BB"), "Interface 2": ("10.0.2.1", "CC:CC:CC:CC:CC:CC")},
+    "routing_table": {"10.0.1.0/24": ("direct", "Interface 1"), "10.0.2.0/24": ("direct", "Interface 2")},
     "ARP_table": {
         "10.0.1.10": "AA:AA:AA:AA:AA:AA",   # Host A
         "10.0.2.20": "DD:DD:DD:DD:DD:DD"  # Host B
