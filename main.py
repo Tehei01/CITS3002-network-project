@@ -12,9 +12,17 @@ def create_message(size):
 
 def setup_network():
     # Create devices
-    host_a = Host(HOST_A['name'], HOST_A['ip'], HOST_A['mac'], HOST_A['routing_table'], HOST_A['ARP'])
-    router_r1 = Router(ROUTER_R1['name'], ROUTER_R1['interfaces'], ROUTER_R1['routing_table'], ROUTER_R1['ARP'])
-    host_b = Host(HOST_B['name'], HOST_B['ip'], HOST_B['mac'], HOST_B['routing_table'], HOST_B['ARP'])
+    host_A = Host(HOST_A['name'], HOST_A['ip'], HOST_A['mac'], HOST_A['routing_table'], HOST_A['ARP_table'])
+    router_R1 = Router(ROUTER_R1['name'], ROUTER_R1['Interfaces'], ROUTER_R1['routing_table'], ROUTER_R1['ARP_table'])
+    host_B = Host(HOST_B['name'], HOST_B['ip'], HOST_B['mac'], HOST_B['routing_table'], HOST_B['ARP_table'])
+
+    host_A.links = {"eth0": (router_R1, "Interface 1")}
+    router_R1.links = {
+        "Interface 1": (host_A, "eth0"),
+        "Interface 2": (host_B, "eth0"),
+    }
+    host_B.links = {"eth0": (router_R1, "Interface 2")}
+    return host_A, router_R1, host_B
 
 
 
@@ -23,7 +31,9 @@ def main():
         print("Usage: python main.py <message_size>")
         return 1
     message_size = int(sys.argv[1])
-    print(create_message(message_size))
+    message = create_message(message_size)
+    host_A, router_R1, host_B = setup_network()
+    host_A.send_message(HOST_B['ip'], message)
     return 0
 
 if __name__ == "__main__":

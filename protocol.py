@@ -6,20 +6,18 @@ protocol.py file containing the header definitions and classes for Layers 2, 3, 
 # Layer 2:Data Link Layer (Ethernet-like Frame)
 class Frame:
     def __init__(self, dest_mac, src_mac, payload, type=0x0800):
-        if len(dest_mac) != 6 or len(src_mac) != 6:
-            raise ValueError("MAC must be 6 bytes")
         self.dest_mac = dest_mac  # Destination MAC address (6 bytes)
         self.src_mac = src_mac    # Source MAC address (6 bytes)
         self.type = type          # Type field (2 bytes, default to IPv4)
         self.payload = payload    # Payload (variable length)
 
 
+
+
 #Layer 3: Header (IP-like Packet)
 class Packet:
     L3_HEADER_SIZE = 12  # Fixed header size for our simplified IP-like packet
     def __init__(self, src_ip, dst_ip, payload, ttl=100, protocol=17):
-        if len(src_ip) != 4 or len(dst_ip) != 4:
-            raise ValueError("IP must be 4 bytes")
         self.src_ip = src_ip      # Source IP address (4 bytes)
         self.dst_ip = dst_ip      # Destination IP address (4 bytes)
         self.ttl = ttl            # Time to Live (1 byte)
@@ -40,26 +38,14 @@ class Segment:
         self.seg_type = seg_type  # Segment type (1 byte: DATA or ACK)
         self.seq_num = seq_num    # Sequence number (1 byte) 0 or 1
         self.data = data          # Data contains the application message (empty for ACK)
-        
+        self.checksum = self.compute_checksum()  # Compute checksum after initializing all fields
 
 
-    
-    def segment_to_bytes(self):
-        """convert segment fields to bytes for checksum computation"""
-        b = b''
-        b += self.src_port.to_bytes(2, 'big')      # 2 bytes
-        b += self.dst_port.to_bytes(2, 'big')      # 2 bytes
-        b += self.length.to_bytes(2, 'big')        # 2 bytes
-        b += self.checksum.to_bytes(2, 'big')      # 2 bytes (zero during computation)
-        b += self.seg_type.to_bytes(1, 'big')      # 1 byte
-        b += self.seq_num.to_bytes(1, 'big')       # 1 byte
-        # make sure data is bytes
-        b += self.data                          
-        return b
+    def __len__(self):
+        return self.length
 
-   
-    # implemented checksum from the lecture slides 
-    def compute_checksum(segment_bytes):
+    def compute_checksum(self):
+        segment_bytes = self.segment_to_bytes()
         # pad to even length
         if len(segment_bytes) % 2:
             segment_bytes += b'\x00'
@@ -74,15 +60,19 @@ class Segment:
 
         # 1's complement
         return ~total & 0xFFFF
-    
-    def verify_checksum(segment_bytes):
-        if len(segment_bytes) % 2:
-            segment_bytes += b'\x00'
-        total = sum(int.from_bytes(segment_bytes[i:i+2], 'big')
-                    for i in range(0, len(segment_bytes), 2))
-        while total >> 16:
-            total = (total & 0xFFFF) + (total >> 16)
-        return total == 0xFFFF
 
-    
-    
+    def verify_checksum(self):
+        computed_checksum = self.compute_checksum()
+        return computed_checksum == self.checksum
+
+    def segment_to_bytes(self):
+            """convert segment fields to bytes for checksum computation except checksum"""
+            b = b''
+            b += self.src_port.to_bytes(2, 'big')      # 2 bytes
+            b += self.dst_port.to_bytes(2, 'big')      # 2 bytes
+            b += self.length.to_bytes(2, 'big')        # 2 bytes     # 2 bytes (zero during computation)
+            b += self.seg_type.to_bytes(1, 'big')      # 1 byte
+            b += self.seq_num.to_bytes(1, 'big')       # 1 byte
+            # make sure data is bytes
+            b += self.data                          
+            return b
