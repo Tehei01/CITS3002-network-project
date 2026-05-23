@@ -101,14 +101,19 @@ class Host:
         if not checksum_verify:
             print(f"{self.name}: Layer 4: Checksum verification failed — segment dropped")
             return
+
         print(f"{self.name}: Layer 4: Checksum verified")
         if segment.seg_type == Segment.DATA:
             print(f"{self.name}: Layer 4: DATA segment delivered to Application Layer. Data size={len(segment.data)}")
+            ack_segment = Segment(
+                src_port=segment.dst_port,
+                dst_port=segment.src_port,
+                seg_type=Segment.ACK,
+                seq_num=segment.seq_num,
+                data=b''
+            )
+            print(f"{self.name}: Layer 4: Segment created by adding transport layer header (ACK, seq={segment.seq_num})")
             print(f"{self.name}: Layer 4: Segment sent to Network Layer")
-            ack_segment = Segment(src_port=segment.dst_port, dst_port=segment.src_port, seg_type=Segment.ACK, seq_num=segment.seq_num, data=b'')
-            print(f"{self.name}: Layer 4: segment created by adding transport layer header (ACK, seq={segment.seq_num})")
-            print(f"{self.name}: Layer 4: segment sent to Network Layer")
-            #print()
             self.l3_send_packet(ack_segment, src_ip)
         elif segment.seg_type == Segment.ACK:
             print(f"{self.name}: Layer 4: ACK received: seq={segment.seq_num}")
