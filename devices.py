@@ -13,13 +13,21 @@ class Host:
         self.ARP_table = ARP_table # ARP table: {IP: MAC}
         self.links = {}  # Links to other devices: {interface_name: (connected_device, connected_interface)}
 
+        # for unexpected ACK handling in rdt2.2
+        self.sender_expected_seq = 1  # for rdt2.2 (for ACKs) filps to zero for first segment
+        self.last_sent_segment = None  # for retransmission in rdt2.2
+        self.last_sent_segment_ip = None  # destination IP of the last sent segment for retransmission
+
+        self.receiver_expected_seq = 0  # for rdt2.2 (for DATA segments) 
+
     def send_message(self, dst_ip, message):
         # split message into segments if larger than MAX_SEGMENT_DATA
         segments = [message[i:i+MAX_SEGMENT_DATA] for i in range(0, len(message), MAX_SEGMENT_DATA)]
-        seq_num = 0
         for segment_data in segments:
-            self.l4_send_segment(segment_data, len(segment_data), dst_ip, src_port=5000, dst_port=80, seq_num=seq_num)
-            seq_num = (seq_num + 1) % 2  # alternate sequence number between 0 and 1 for simplicity
+            self.sender_expected_seq = (self.sender_expected_seq + 1) % 2
+            self.l4_send_segment(segment_data, len(segment_data), dst_ip, src_port=5000, dst_port=80, seq_num=self.sender_expected_seq)
+            # alternate sequence number for rdt2.2 (0 and 1)
+            
 
     # ------------------------- layer 2 ----------------------------
     def l2_send_frame(self, packet, next_hop_ip, out_interface=None):
@@ -33,7 +41,7 @@ class Host:
         print(f"{self.name}: Layer 2: Frame created: SRC_MAC={self.mac}, DST_MAC={next_hop_mac}")
         print(f"{self.name}: Layer 2: Frame sent")
         peer, peer_interface = self.links[out_interface]
-        #print()
+        print()
         peer.l2_receive_frame(frame, in_interface=peer_interface)
         
         
@@ -43,7 +51,7 @@ class Host:
         print(f"{self.name}: Layer 2: Frame received")
         print(f"{self.name}: Layer 2: Source MAC learned: {frame.src_mac}")
         print(f"{self.name}: Layer 2: Packet delivered to Network Layer")
-        #print()
+        print()
         self.l3_receive_packet(frame.payload)
         
 
@@ -64,7 +72,7 @@ class Host:
         print(f"{self.name}: Layer 3: Outgoing interface selected")
         packet = Packet(src_ip=self.ip, dst_ip=dst_ip, payload=segment, ttl=TTL, protocol=PROTOCOL_UDP)
         print(f"{self.name}: Layer 3: Packet forwarded to Data Link Layer")
-        #print()
+        print()
         self.l2_send_frame(packet, next_hop_ip, out_interface)
         
 
@@ -74,7 +82,7 @@ class Host:
         if packet.dst_ip == self.ip:
             print(f"{self.name}: Layer 3: Packet identified as local delivery")
             print(f"{self.name}: Layer 3: Segment delivered to Transport Layer")
-            #print()
+            print()
             self.l4_receive_segment(packet.payload, src_ip=packet.src_ip)
         else:
             # should never trigger with this topology and routing tables but included it as an example
@@ -86,11 +94,13 @@ class Host:
     def l4_send_segment(self, data, data_size, dst_ip, src_port, dst_port, seq_num):
         print(f"{self.name}: Layer 4: Data received from Application Layer. Data size={data_size}")
         segment = Segment(src_port=src_port, dst_port=dst_port, seg_type=Segment.DATA, seq_num=seq_num, data=data)
+        self.last_sent_segment = segment  # for potential retransmission in rdt2.2
+        self.last_sent_segment_ip = dst_ip  # store destination IP for retransmission
         # checksum is automatically computed in Segment constructor
         print(f"{self.name}: Layer 4: Checksum computed")
         print(f"{self.name}: Layer 4: Segment created by adding transport layer header (DATA, seq={seq_num}) (encapsulation)")
         print(f"{self.name}: Layer 4: Segment sent to Network Layer")
-        #print()
+        print()
         self.l3_send_packet(segment, dst_ip)
         
 
@@ -103,21 +113,34 @@ class Host:
             return
 
         print(f"{self.name}: Layer 4: Checksum verified")
-        if segment.seg_type == Segment.DATA:
-            print(f"{self.name}: Layer 4: DATA segment delivered to Application Layer. Data size={len(segment.data)}")
+        if segment.seg_type == segment.DATA:
+            # stops duplicate segments from being delivered to the application layer 
+            if segment.seq_num == self.receiver_expected_seq:
+                print(f"{self.name}: Layer 4: DATA segment delivered to Application Layer. Data size={len(segment.data)}")
+                ack_seq = segment.seq_num
+                self.receiver_expected_seq = 1 - self.receiver_expected_seq 
+            else:
+                ack_seq = 1 - self.receiver_expected_seq  # re-ACK previous
             ack_segment = Segment(
                 src_port=segment.dst_port,
                 dst_port=segment.src_port,
                 seg_type=Segment.ACK,
-                seq_num=segment.seq_num,
+                seq_num=ack_seq,
                 data=b''
             )
-            print(f"{self.name}: Layer 4: Segment created by adding transport layer header (ACK, seq={segment.seq_num})")
+            print(f"{self.name}: Layer 4: Segment created by adding transport layer header (ACK, seq={ack_seq})")
             print(f"{self.name}: Layer 4: Segment sent to Network Layer")
             self.l3_send_packet(ack_segment, src_ip)
         elif segment.seg_type == Segment.ACK:
-            print(f"{self.name}: Layer 4: ACK received: seq={segment.seq_num}")
-
+            if segment.seq_num == self.sender_expected_seq:
+                print(f"{self.name}: Layer 4: ACK received: seq={segment.seq_num}")
+            elif segment.seq_num != self.sender_expected_seq:
+                """
+                if unexpected ACK is received retransmit segment
+                """
+                print(f"{self.name}: Layer 4: ACK received with unexpected sequence number: seq={segment.seq_num} (expected {self.sender_expected_seq})")
+                print(f"{self.name}: Layer 4: Retransmitting segment with seq={self.sender_expected_seq}")
+                self.l3_send_packet(self.last_sent_segment, self.last_sent_segment_ip)
 
 
 
@@ -141,7 +164,7 @@ class Router:
         frame = Frame(dest_mac=next_hop_mac, src_mac=interface_mac, payload=packet)
         print(f"{self.name}: Layer 2: Frame created: SRC_MAC={interface_mac}, DST_MAC={next_hop_mac}")
         print(f"{self.name}: Layer 2: Frame forwarded on {out_interface}")
-        #print()
+        print()
         peer, peer_interface = self.links[out_interface]
         peer.l2_receive_frame(frame, in_interface=peer_interface)
 
@@ -151,7 +174,7 @@ class Router:
         print(f"{self.name}: Layer 2: Frame received on {in_interface}")
         print(f"{self.name}: Layer 2: Source MAC learned: {frame.src_mac} on {in_interface}")
         print(f"{self.name}: Layer 2: Packet delivered to Network Layer")
-        #print()
+        print()
         self.l3_forward_packet(frame.payload)
 
     
@@ -173,7 +196,7 @@ class Router:
         print(f"{self.name}: Layer 3: Next-hop IP determined: {next_hop_ip}")
         print(f"{self.name}: Layer 3: Outgoing interface selected ({out_interface})")
         print(f"{self.name}: Layer 3: Packet forwarded to Data Link Layer")
-        #print()
+        print()
         self.l2_send_frame(packet, next_hop_ip, out_interface)
 
 
@@ -202,4 +225,3 @@ def ip_in_network(ip, network, prefix):
         return True  # default route matches everything
     mask = (0xFFFFFFFF << (32 - prefix)) & 0xFFFFFFFF
     return (ip_to_int(ip) & mask) == (ip_to_int(network) & mask)
-
