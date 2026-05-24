@@ -4,6 +4,8 @@ from config import HOST_A, ROUTER_R1, HOST_B
 from devices import Host, Router
 from protocol import Frame, Packet, Segment
 
+sys.stdout.reconfigure(encoding="utf-8")
+
 
 def create_message(size):
     """Create a message of the specified size in bytes"""
@@ -30,7 +32,14 @@ def main():
     if len(sys.argv) != 2:
         print("Usage: python main.py <message_size>")
         return 1
-    message_size = int(sys.argv[1])
+    try:
+        message_size = int(sys.argv[1])
+        if message_size < 0:
+            print("Error: Message size must be a non-negative integer.")
+            return 1
+    except ValueError:
+        print("Error: Message size must be an integer.")
+        return 1
     message = create_message(message_size)
     host_A, router_R1, host_B = setup_network()
     host_A.send_message(HOST_B['ip'], message)

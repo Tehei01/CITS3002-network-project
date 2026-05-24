@@ -1,7 +1,10 @@
 todo:
     - do we need other possible branches like checksum verif failed print error msg
-    -  error handling for wrong input
-
+    - ack stuff
+    -Protocol Header Definitions:
+    - port stuff
+    - encapsulation UDP like segment for layer 4
+    - check encapsualtion has ot be in bytes or not
 
 for report
     - talk about the interface system for layer 2
