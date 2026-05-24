@@ -13,10 +13,12 @@ class Host:
         self.ARP_table = ARP_table # ARP table: {IP: MAC}
         self.links = {}  # Links to other devices: {interface_name: (connected_device, connected_interface)}
 
-        # for unexpected ACK handling in rdt2.2
+        # for unexpected ACK handling in rdt2.2 (and checksum)
         self.sender_expected_seq = 1  # for rdt2.2 (for ACKs) filps to zero for first segment
         self.last_sent_segment = None  # for retransmission in rdt2.2
         self.last_sent_segment_ip = None  # destination IP of the last sent segment for retransmission
+        self.last_sent_ack = None
+        self.last_sent_ack_ip = None
 
         self.receiver_expected_seq = 0  # for rdt2.2 (for DATA segments) 
 
@@ -45,7 +47,6 @@ class Host:
         peer.l2_receive_frame(frame, in_interface=peer_interface)
         
         
-
     
     def l2_receive_frame(self, frame, in_interface=None):
         print(f"{self.name}: Layer 2: Frame received")
@@ -110,6 +111,11 @@ class Host:
         checksum_verify = segment.verify_checksum()
         if not checksum_verify:
             print(f"{self.name}: Layer 4: Checksum verification failed — segment dropped")
+            if self.last_sent_ack is not None and self.last_sent_ack_ip is not None:
+                # resend last ACK to trigger retransmission in rdt2.2
+                print(f"{self.name}: Layer 4: Segment created by adding transport layer header (ACK, seq={ack_seq})")
+                print(f"{self.name}: Layer 4: Segment sent to Network Layer")
+                self.l3_send_packet(self.last_sent_ack, self.last_sent_ack_ip)
             return
 
         print(f"{self.name}: Layer 4: Checksum verified")
@@ -119,18 +125,28 @@ class Host:
                 print(f"{self.name}: Layer 4: DATA segment delivered to Application Layer. Data size={len(segment.data)}")
                 ack_seq = segment.seq_num
                 self.receiver_expected_seq = 1 - self.receiver_expected_seq 
-            else:
-                ack_seq = 1 - self.receiver_expected_seq  # re-ACK previous
-            ack_segment = Segment(
+                ack_segment = Segment(
                 src_port=segment.dst_port,
                 dst_port=segment.src_port,
                 seg_type=Segment.ACK,
                 seq_num=ack_seq,
                 data=b''
-            )
-            print(f"{self.name}: Layer 4: Segment created by adding transport layer header (ACK, seq={ack_seq})")
-            print(f"{self.name}: Layer 4: Segment sent to Network Layer")
-            self.l3_send_packet(ack_segment, src_ip)
+                )
+                self.last_sent_ack = ack_segment  # for potential retransmission in rdt2.2
+                self.last_sent_ack_ip = src_ip  # store destination IP for retransmission
+                print(f"{self.name}: Layer 4: Segment created by adding transport layer header (ACK, seq={ack_seq})")
+                print(f"{self.name}: Layer 4: Segment sent to Network Layer")
+                self.l3_send_packet(ack_segment, src_ip)
+            else:
+                # resend last ACK to trigger retransmission in rdt2.2
+                if self.last_sent_ack is not None and self.last_sent_ack_ip is not None:
+                    print(f"{self.name}: Layer 4: Duplicate DATA segment received with sequence number {segment.seq_num} (expected {self.receiver_expected_seq})")
+                    print(f"{self.name}: Layer 4: Segment created by adding transport layer header (ACK, seq={ack_seq})")
+                    print(f"{self.name}: Layer 4: Segment sent to Network Layer")
+                    self.l3_send_packet(self.last_sent_ack, self.last_sent_ack_ip)
+
+
+        # --------- ACK handling for rdt2.2 ---------
         elif segment.seg_type == Segment.ACK:
             if segment.seq_num == self.sender_expected_seq:
                 print(f"{self.name}: Layer 4: ACK received: seq={segment.seq_num}")

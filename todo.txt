@@ -1,7 +1,6 @@
 todo:
     - do we need other possible branches like checksum verif failed print error msg
-    - ack stuff
-    -Protocol Header Definitions:
+    - Protocol Header Definitions:
     - port stuff
     - encapsulation UDP like segment for layer 4
     - check encapsualtion has ot be in bytes or not
@@ -17,3 +16,7 @@ things to check later
         Real hosts usually have: "my subnet → direct" and "everything else → default gateway." Your current setup works, 
         but consider whether you want to generalise this to a default route ("0.0.0.0/0") for anything not in the local subnet. 
         For a two-subnet assignment it doesn't matter; just flagging it.
+
+
+done:
+    - ack stuff
