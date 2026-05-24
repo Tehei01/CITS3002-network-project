@@ -1,9 +1,6 @@
 todo:
-    - do we need other possible branches like checksum verif failed print error msg
-    - Protocol Header Definitions:
-    - port stuff
-    - encapsulation UDP like segment for layer 4
-    - check encapsualtion has ot be in bytes or not
+  
+
 
 for report
     - talk about the interface system for layer 2
@@ -11,12 +8,22 @@ for report
 
 
 
-things to check later
+
+
+
+done:
+    - ack stuff
+    - encapsulation UDP like segment for layer 4
+    - port stuff
+    - check encapsualtion has ot be in bytes or not
+    - do we need other possible branches like checksum verif failed print error msg
+    - Protocol Header Definitions:
+    - look at actual error printing
+
+
     - 3. Hosts probably don't need a routing table entry for their own subnet and a default-ish entry for the other.
         Real hosts usually have: "my subnet → direct" and "everything else → default gateway." Your current setup works, 
         but consider whether you want to generalise this to a default route ("0.0.0.0/0") for anything not in the local subnet. 
         For a two-subnet assignment it doesn't matter; just flagging it.
 
-
-done:
-    - ack stuff
+  - final check 

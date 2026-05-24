@@ -21,7 +21,7 @@ class Packet:
         self.dst_ip = dst_ip      # Destination IP address (4 bytes)
         self.ttl = ttl            # Time To Live (1 byte)
         self.protocol = protocol  # Protocol field (1 byte, 17 = UDP-like payload)
-        self.total_length = self.L3_HEADER_SIZE + len(payload)
+        self.total_length = self.L3_HEADER_SIZE + payload.length  # total_length = IP_HEADER_SIZE + L4_HEADER_SIZE + len(data)
         self.payload = payload    # Payload contains the Layer 4 segment
 
 
@@ -47,6 +47,8 @@ class Segment:
         self.seg_type = seg_type      # 0 = DATA, 1 = ACK
         self.seq_num = seq_num        # Alternating bit sequence number: 0 or 1
         self.data = data              # Application data, empty for ACK segments
+
+        # Compute the checksum after initializing all fields
         self.checksum = self.compute_checksum()
 
     def __len__(self):
