@@ -30,26 +30,6 @@ class Host:
 
         self.receiver_expected_seq = 0  # for rdt2.2 (for DATA segments)
 
-    def send_message(self, dst_ip, message):
-        # split message into segments if larger than MAX_SEGMENT_DATA
-        if len(message) == 0:
-            segments = [b'']
-        else:
-            segments = [message[i:i+MAX_SEGMENT_DATA]
-                        for i in range(0, len(message), MAX_SEGMENT_DATA)]
-        for segment_data in segments:
-            
-            self.l4_send_segment(
-                segment_data,
-                len(segment_data),
-                dst_ip,
-                src_port=5000,
-                dst_port=80,
-                seq_num=self.sender_expected_seq,
-            )
-            # alternate sequence number for rdt2.2 (0 and 1)
-            self.sender_expected_seq = (self.sender_expected_seq + 1) % 2
-            
 
     # ------------------------- layer 2 ----------------------------
     def l2_send_frame(self, packet, next_hop_ip, out_interface=None):
@@ -128,7 +108,26 @@ class Host:
             )
 
     # ------------------------- layer 4 ----------------------------
-    # figure out the port stuff
+    def l4_send_message(self, dst_ip, message):
+        # split message into segments if larger than MAX_SEGMENT_DATA
+        if len(message) == 0:
+            segments = [b'']
+        else:
+            segments = [message[i:i+MAX_SEGMENT_DATA]
+                        for i in range(0, len(message), MAX_SEGMENT_DATA)]
+        for segment_data in segments:
+            
+            self.l4_send_segment(
+                segment_data,
+                len(segment_data),
+                dst_ip,
+                src_port=5000,
+                dst_port=80,
+                seq_num=self.sender_expected_seq,
+            )
+            # alternate sequence number for rdt2.2 (0 and 1)
+            self.sender_expected_seq = (self.sender_expected_seq + 1) % 2
+
     def l4_send_segment(self, data, data_size, dst_ip, src_port, dst_port, seq_num):
         print(
             f"{self.name}: Layer 4: Data received from Application Layer. Data size={data_size}"
@@ -301,7 +300,7 @@ def lookup_route(dst_ip, routing_table):  # test
         prefix = int(prefix)
 
         if ip_in_network(dst_ip, network, prefix):
-            # "direct" means destination is on this network,
+            # direct means destination is on this network,
             # so next-hop IP is the destination itself
             actual_next_hop = dst_ip if next_hop == "direct" else next_hop
             return actual_next_hop, interface
