@@ -42,7 +42,7 @@ def main():
         return 1
     message = create_message(message_size)
     host_A, router_R1, host_B = setup_network()
-    host_A.l4_send(HOST_B['ip'], message)
+    host_A.l4_send_message(HOST_B['ip'], message)
     return 0
 
 if __name__ == "__main__":
