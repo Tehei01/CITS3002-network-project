@@ -90,11 +90,11 @@ class Segment:
         The checksum field is included as a zero placeholder.
         """
         b = b''
-        b += self.src_port.to_bytes(2, 'big')       # Source port: 2 bytes
-        b += self.dst_port.to_bytes(2, 'big')       # Destination port: 2 bytes
-        b += self.length.to_bytes(2, 'big')         # Length: 2 bytes
-        b += (0).to_bytes(2, 'big')                 # Checksum placeholder: 2 bytes
-        b += self.seg_type.to_bytes(1, 'big')       # Type: 1 byte
-        b += self.seq_num.to_bytes(1, 'big')        # Sequence number: 1 byte
-        b += self.data                              # Data: variable length
+        b += self.src_port.to_bytes(2, 'big')    # Source port: 2 bytes
+        b += self.dst_port.to_bytes(2, 'big')    # Destination port: 2 bytes
+        b += self.length.to_bytes(2, 'big')     # Length: 2 bytes
+        b += (0).to_bytes(2, 'big')            # placeholder for checksum: 2 bytes
+        b += self.seg_type.to_bytes(1, 'big')    # Type: 1 byte
+        b += self.seq_num.to_bytes(1, 'big')    # Sequence number: 1 byte
+        b += self.data                        # Data: variable length
         return b
